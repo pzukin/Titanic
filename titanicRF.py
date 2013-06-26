@@ -6,11 +6,7 @@
 # embarkation?
 # can model age potentially
 
-# try svm, logistic regression, random forests
-# try clustering?
-
 # interesting to ask what features have most distinguishing power
-# learning curve? high variance or bias regime?
 # retrain on everything or use trained model with part of the data?
 # python passing by reference?
 # better model for age
@@ -157,7 +153,7 @@ def PrelimPlots(dat, lab):
 
 
     # save figure
-    plt.savefig('plots/prelim.pdf', bbox_inches='tight')
+    plt.savefig('prelim.pdf', bbox_inches='tight')
     fig.clear()
 
 def mapToF(train,ch):
@@ -280,33 +276,33 @@ def plotLearningCurve(dat,lab,optim):
     ax.set_xlabel(r"% of Training Set Used",fontsize=20)
     ax.axis([0.0, 1.0, -0.1, 0.5])
     plt.legend(loc='upper right',prop=prop)
-    plt.savefig('plots/LC.pdf', bbox_inches='tight')
+    plt.savefig('LC.pdf', bbox_inches='tight')
     fig.clear()
 
     # where is model failing?
     clf = clf.fit(X_train, y_train)
     mask = clf.predict(X_test)!=y_test
-    print 'Age'
-    print X_test[mask,2]
-    print 'Gender'
-    print X_test[mask,0]
-    print 'Class'
-    print X_test[mask,1]
-    print '3'
-    print X_test[mask,3]
-    print '4'
-    print X_test[mask,4]
-    print '5'
-    print X_test[mask,5]
-    print '6'
-    print X_test[mask,6]
-    print '7'
-    print X_test[mask,7]
-    print '8'
-    print X_test[mask,8]
-    print mask.sum(), np.shape(X_test)
+    #print 'Age'
+    #print X_test[mask,2]
+    #print 'Gender'
+    #print X_test[mask,0]
+    #print 'Class'
+    #print X_test[mask,1]
+    #print '3'
+    #print X_test[mask,3]
+    #print '4'
+    #print X_test[mask,4]
+    #print '5'
+    #print X_test[mask,5]
+    #print '6'
+    #print X_test[mask,6]
+    #print '7'
+    #print X_test[mask,7]
+    #print '8'
+    #print X_test[mask,8]
+    #print mask.sum(), np.shape(X_test)
 
-    print clf.feature_importances_
+    #print clf.feature_importances_
 
 def AgeModel(dat,lab):
 
@@ -343,15 +339,15 @@ def main():
     # Class labels
     lab = np.array([int(h) for h in train[:,0]])
 
-    # Generate better model for missing Age feature
-    dat = AgeModel(dat,lab)
+    # Generate better model for missing Age feature (To do)
+    #dat = AgeModel(dat,lab)
 
     # Preliminary Plots
     print 'Generating preliminary scatter plots of data.\n'
     PrelimPlots(dat,lab)
 
     # ML algorithms
-    print "Choosing best parameters for Random Forest:"
+    print "Choosing best parameters for Random Forest algorithm:"
     optim = TestRandForest(dat,lab)
 
     # Plotting Learning Curve
