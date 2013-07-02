@@ -1,11 +1,11 @@
 # This script analyzes the titanic data set from kaggle.
-# It uses a random forest to make a prediction based on the training set.
+# It uses a SVM to make a prediction based on the training set.
 
 # priorities:
 # build better age model (done). even better?
 # put in more information from other features (ticket number)
 # think of new features
-# look at probabilities associated with predictions
+# look at probabilities associated with predictions (where does it go wrong)
 # F1 score
 # ensemble methods
 # plot test set
@@ -25,28 +25,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.font_manager
 import matplotlib.cm as cm
+from sklearn import svm
 from sklearn import cross_validation
-from sklearn.ensemble import RandomForestClassifier
 import utils
 
-def TestRandForest(dat,lab):
+def TestSVM(dat,lab):
 
-    '''                                        
-    This function finds the optimal parameters for the classifier                                        
-    Parameters:                                                                                       
+    '''
+    This function finds the optimal parameters for the classifier
+                                                                 
+    Parameters:
     ----------
     dat: numpy array with all records
-    lab: numpy array with class labels of all records                                                        
+    lab: numpy array with class labels of all records
+
     Returns:
     --------
-    par: optimal parameters for the classifier 
+    par: optimal parameters for the classifier
     '''
 
+
     # RF parameters. Will choose one based on which does best on the validation set
-    # n_estimators, max_features
-    est=range(5,26,5)
-    feat=range(2,8,1)
-    par = [(e,f) for e in est for f in feat]
+    # penalty parameter
+    par = [0.1, 0.3, 1.0, 3.0, 10.0]
 
     # want to try different ensembles to get error bar on score
     num=10
@@ -62,10 +63,10 @@ def TestRandForest(dat,lab):
         X_train, X_tmp, y_train, y_tmp = cross_validation.train_test_split(dat, lab, test_size=0.4, random_state=seed[nv])
         X_val, X_test, y_val, y_test = cross_validation.train_test_split(X_tmp, y_tmp, test_size=0.5, random_state=seed[nv])
 
-        # now train RF for each parameter combination
+        # now train SVM for each parameter combination
         for i in xrange(0,len(par)):
         
-            clf = RandomForestClassifier(n_estimators=par[i][0],max_features=par[i][1],min_samples_split=1)
+            clf = svm.SVC(C=par[i])
             clf = clf.fit(X_train, y_train)
             val_score[nv,i] = clf.score(X_val, y_val)
             test_score[nv,i] = clf.score(X_test,y_test)
@@ -82,17 +83,19 @@ def TestRandForest(dat,lab):
 
 def plotLearningCurve(dat,lab,optim):
 
-     ''' 
-    This function plots the learning curve for the classifier                                                                                                         
+     '''
+    This function plots the learning curve for the classifier
+  
     Parameters:
-    ----------- 
+    -----------
     dat: numpy array with all records
     lab: numpay array with class labels of all records
-    optim: optimal parameters for classifier                                                           
- 
+    optim: optimal parameters for classifier 
+
     '''
 
-    clf = RandomForestClassifier(n_estimators=optim[0],max_features=optim[1],min_samples_split=1,compute_importances=True)
+
+    clf = svm.SVC(C=optim, probability=True)
 
     # split training data into train and test (already chose optimal parameters)
     X_train, X_test, y_train, y_test = cross_validation.train_test_split(dat, lab, test_size=0.3)
@@ -120,34 +123,10 @@ def plotLearningCurve(dat,lab,optim):
     ax.set_xlabel(r"% of Training Set Used",fontsize=20)
     ax.axis([0.0, 1.0, -0.1, 0.5])
     plt.legend(loc='upper right',prop=prop)
-    plt.savefig('LC_RF.pdf', bbox_inches='tight')
+    plt.savefig('LC_SVM.pdf', bbox_inches='tight')
     fig.clear()
 
-    # where is model failing?
-    clf = clf.fit(X_train, y_train)
-    mask = clf.predict(X_test)!=y_test
-    #print 'Age'
-    #print X_test[mask,2]
-    #print 'Gender'
-    #print X_test[mask,0]
-    #print 'Class'
-    #print X_test[mask,1]
-    #print '3'
-    #print X_test[mask,3]
-    #print '4'
-    #print X_test[mask,4]
-    #print '5'
-    #print X_test[mask,5]
-    #print '6'
-    #print X_test[mask,6]
-    #print '7'
-    #print X_test[mask,7]
-    #print '8'
-    #print X_test[mask,8]
-    #print mask.sum(), np.shape(X_test)
-
-    print clf.feature_importances_
-    
+    # curious about where model is failing
     predProb = clf.predict_proba(X_test)
     tmp = np.zeros((np.shape(predProb)[0],np.shape(predProb)[1]+2))
     tmp[:,:-2]=predProb
@@ -193,13 +172,15 @@ def main():
     means = np.zeros(len(dictN),dtype=np.float64)
     dat, means = utils.AgeModel(dat, dictN, means, 1)
 
-    # Preliminary Plots
+    # Preliminary Plots 
     print 'Generating preliminary scatter plots of data.\n'
     utils.PrelimPlots(dat,lab)
 
+    dat = utils.mean_norm(dat)
+
     # ML algorithms
-    print "Choosing best parameters for Random Forest algorithm:"
-    optim = TestRandForest(dat,lab)
+    print "Choosing best parameters for SVM algorithm:"
+    optim = TestSVM(dat,lab)
 
     # Plotting Learning Curve
     print "Plotting the learning curve\n"
@@ -215,15 +196,17 @@ def main():
     # Make better prediction for missing Age Features
     testF, means = utils.AgeModel(testF, dictN, means, 0)
 
+    testF = utils.mean_norm(testF)
+
     # Make prediction
     print "Making Prediction\n"
-    clf = RandomForestClassifier(n_estimators=optim[0],max_features=optim[1],min_samples_split=1)
+    clf = svm.SVC(C=optim)
     clf = clf.fit(dat, lab)
     pred = clf.predict(testF)
 
     # Now output prediction
     print "Outputting Prediction\n"
-    utils.OutputFile(pred, train[0,:2], test[1,0], 0)
+    utils.OutputFile(pred, train[0,:2], test[1,0],1)
 
     print "Done"
 

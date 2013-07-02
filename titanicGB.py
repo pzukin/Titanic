@@ -1,5 +1,5 @@
 # This script analyzes the titanic data set from kaggle.
-# It uses a random forest to make a prediction based on the training set.
+# It uses a gradient boosting classifier to make a prediction based on the training set.
 
 # priorities:
 # build better age model (done). even better?
@@ -9,8 +9,6 @@
 # F1 score
 # ensemble methods
 # plot test set
-
-# how much do relationships matter? (does whole family survive?)
 
 # retrain on everything or use trained model with part of the data?
 # use more cabin information
@@ -26,27 +24,30 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager
 import matplotlib.cm as cm
 from sklearn import cross_validation
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 import utils
 
-def TestRandForest(dat,lab):
+def TestGradBoost(dat,lab):
 
-    '''                                        
-    This function finds the optimal parameters for the classifier                                        
-    Parameters:                                                                                       
-    ----------
+    '''
+    This function finds the optimal parameters for the classifier
+
+    Parameters:
+    -----------
     dat: numpy array with all records
-    lab: numpy array with class labels of all records                                                        
+    lab: numpy array with class labels of all records
+
     Returns:
     --------
-    par: optimal parameters for the classifier 
+    par: optimal parameters for the classifier
+
     '''
 
-    # RF parameters. Will choose one based on which does best on the validation set
-    # n_estimators, max_features
-    est=range(5,26,5)
-    feat=range(2,8,1)
-    par = [(e,f) for e in est for f in feat]
+    # Gradient Boost parameters. Will choose one based on which does best on the validation set
+    # learning_rate, subsample
+    lr = np.linspace(0.01,0.2,num=5)
+    sub = np.linspace(0.1,1.0,num=5)
+    par = [(e,f) for e in lr for f in sub]
 
     # want to try different ensembles to get error bar on score
     num=10
@@ -65,7 +66,7 @@ def TestRandForest(dat,lab):
         # now train RF for each parameter combination
         for i in xrange(0,len(par)):
         
-            clf = RandomForestClassifier(n_estimators=par[i][0],max_features=par[i][1],min_samples_split=1)
+            clf = GradientBoostingClassifier(learning_rate=par[i][0],subsample=par[i][1])
             clf = clf.fit(X_train, y_train)
             val_score[nv,i] = clf.score(X_val, y_val)
             test_score[nv,i] = clf.score(X_test,y_test)
@@ -73,7 +74,7 @@ def TestRandForest(dat,lab):
     # Find optimal parameters
     tmp = np.argmax(np.mean(val_score,axis=0))
     print
-    print 'Optimal parameters (num_estimators, max_features):', par[tmp]
+    print 'Optimal parameters (learning rate, subsampling):', par[tmp]
     print 'Mean | Std Score (Validation set):', np.mean(val_score,axis=0)[tmp], '|', np.std(val_score,axis=0)[tmp]
     print 'Mean | Std Score (Test set):', np.mean(test_score,axis=0)[tmp], '|', np.std(test_score,axis=0)[tmp]
 
@@ -82,17 +83,18 @@ def TestRandForest(dat,lab):
 
 def plotLearningCurve(dat,lab,optim):
 
-     ''' 
-    This function plots the learning curve for the classifier                                                                                                         
+    '''
+    This function plots the learning curve for the classifier
+
     Parameters:
-    ----------- 
+    -----------
     dat: numpy array with all records
     lab: numpay array with class labels of all records
-    optim: optimal parameters for classifier                                                           
- 
+    optim: optimal parameters for classifier
+
     '''
 
-    clf = RandomForestClassifier(n_estimators=optim[0],max_features=optim[1],min_samples_split=1,compute_importances=True)
+    clf = GradientBoostingClassifier(learning_rate=optim[0],subsample=optim[1])
 
     # split training data into train and test (already chose optimal parameters)
     X_train, X_test, y_train, y_test = cross_validation.train_test_split(dat, lab, test_size=0.3)
@@ -120,33 +122,10 @@ def plotLearningCurve(dat,lab,optim):
     ax.set_xlabel(r"% of Training Set Used",fontsize=20)
     ax.axis([0.0, 1.0, -0.1, 0.5])
     plt.legend(loc='upper right',prop=prop)
-    plt.savefig('LC_RF.pdf', bbox_inches='tight')
+    plt.savefig('LC_GB.pdf', bbox_inches='tight')
     fig.clear()
 
     # where is model failing?
-    clf = clf.fit(X_train, y_train)
-    mask = clf.predict(X_test)!=y_test
-    #print 'Age'
-    #print X_test[mask,2]
-    #print 'Gender'
-    #print X_test[mask,0]
-    #print 'Class'
-    #print X_test[mask,1]
-    #print '3'
-    #print X_test[mask,3]
-    #print '4'
-    #print X_test[mask,4]
-    #print '5'
-    #print X_test[mask,5]
-    #print '6'
-    #print X_test[mask,6]
-    #print '7'
-    #print X_test[mask,7]
-    #print '8'
-    #print X_test[mask,8]
-    #print mask.sum(), np.shape(X_test)
-
-    print clf.feature_importances_
     
     predProb = clf.predict_proba(X_test)
     tmp = np.zeros((np.shape(predProb)[0],np.shape(predProb)[1]+2))
@@ -197,9 +176,11 @@ def main():
     print 'Generating preliminary scatter plots of data.\n'
     utils.PrelimPlots(dat,lab)
 
+    dat = utils.mean_norm(dat)
+
     # ML algorithms
-    print "Choosing best parameters for Random Forest algorithm:"
-    optim = TestRandForest(dat,lab)
+    print "Choosing best parameters for Gradient Boosting algorithm:"
+    optim = TestGradBoost(dat,lab)
 
     # Plotting Learning Curve
     print "Plotting the learning curve\n"
@@ -215,15 +196,17 @@ def main():
     # Make better prediction for missing Age Features
     testF, means = utils.AgeModel(testF, dictN, means, 0)
 
+    testF = utils.mean_norm(testF)
+
     # Make prediction
     print "Making Prediction\n"
-    clf = RandomForestClassifier(n_estimators=optim[0],max_features=optim[1],min_samples_split=1)
+    clf = GradientBoostingClassifier(learning_rate=optim[0],subsample=optim[1])
     clf = clf.fit(dat, lab)
     pred = clf.predict(testF)
 
     # Now output prediction
     print "Outputting Prediction\n"
-    utils.OutputFile(pred, train[0,:2], test[1,0], 0)
+    utils.OutputFile(pred, train[0,:2], test[1,0], 2)
 
     print "Done"
 
