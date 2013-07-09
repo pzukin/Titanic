@@ -362,7 +362,7 @@ def AgeModel2(dat, dat2, tar2, ch):
     --------
     dat: numpy array of all records with new values for missing ages
     dat2: numpy array of records that contribute to SVM
-    tar2: numpy array of labels that train SVM
+    tar2: numpy array of labels that help train SVM
     '''
 
     mask = dat[:,2] != -1.0

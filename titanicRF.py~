@@ -25,7 +25,7 @@ def TestRandForest(dat, lab):
 
     # RF parameters. Will choose one based on which does best on the validation set
     # n_estimators, max_features
-    est = range(5, 31, 5)
+    est = range(15, 41, 5)
     feat = range(2, 8, 1)
     par = [(e,f) for e in est for f in feat]
 
