@@ -2,4 +2,10 @@ This repository contains multiple python programs that use different machine lea
 
 The training and test data sets are also in the repository in case you wanted to try out the code.
 
-titanicRF.py utilizes Random Forests
+titanicRF.py uses Random Forests
+
+titanicSVM.py uses Support Vector Machines
+
+titanicGB.py uses Gradient Tree Boosting
+
+utils.py contains functions used by all programs above

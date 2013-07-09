@@ -25,7 +25,7 @@ def TestRandForest(dat, lab):
 
     # RF parameters. Will choose one based on which does best on the validation set
     # n_estimators, max_features
-    est = range(5, 26, 5)
+    est = range(15, 41, 5)
     feat = range(2, 8, 1)
     par = [(e,f) for e in est for f in feat]
 
@@ -149,10 +149,10 @@ def plotLearningCurve(dat, lab, optim):
      tmp[:,-2] = clf.predict(xTest)
      tmp[:,-1] = yTest
      mask = tmp[:,-2] != tmp[:,-1]
-     print tmp[mask]
-     print mask.sum(), len(xTest)
+     #print tmp[mask]
+     #print mask.sum(), len(xTest)
     
-     print tmp[:50,:]
+     #print tmp[:50,:]
 
 
 def main():
@@ -185,12 +185,23 @@ def main():
     lab = np.array([int(h) for h in train[1:,1]])
 
     # Generate better model for missing Age feature
-    means = np.zeros(len(dictN), dtype = np.float64)
-    dat, means = utils.AgeModel(dat, dictN, means, 1)
+    #means = np.zeros(len(dictN), dtype = np.float64)
+    #dat, means = utils.AgeModel(dat, dictN, means, 1)
+    mask = dat[:,2] != -1.0
+    dat2 = np.zeros((mask.sum(),9), dtype = np.float64)
+    tar2 = np.zeros(mask.sum(), dtype = np.float64)
+    dat, dat2, tar2 = utils.AgeModel2(dat, dat2, tar2, 1)
 
+    # testing
+    #mask = dat[:,2] == -1.0
+    #print mask.sum()
+  
     # Preliminary Plots
     print 'Generating preliminary scatter plots of data.\n'
     utils.PrelimPlots(dat, lab)
+    utils.AgePlots(dat)
+
+    #dat = utils.MeanNorm(dat)
 
     # ML algorithms
     print "Choosing best parameters for Random Forest algorithm:"
@@ -208,7 +219,10 @@ def main():
     testF, dictN, dictC = utils.mapToF(test[1:,:], 1, dictN, dictC)
 
     # Make better prediction for missing Age Features
-    testF, means = utils.AgeModel(testF, dictN, means, 0)
+    #testF, means = utils.AgeModel(testF, dictN, means, 0)
+    testF, dat2, tar2 = utils.AgeModel2(testF, dat2, tar2, 0)
+
+    #testF = utils.MeanNorm(testF)
 
     # Make prediction
     print "Making Prediction\n"

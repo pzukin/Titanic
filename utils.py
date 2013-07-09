@@ -5,6 +5,7 @@ import csv
 import matplotlib.pyplot as plt
 import matplotlib.font_manager
 import matplotlib.cm as cm
+from sklearn import svm
 
 def ReadFile(path, out):
 
@@ -310,14 +311,14 @@ def PrelimPlots(dat, lab):
 def AgeModel(dat, dict, means, ch):
 
     '''
-    This function replaces  missing ages with more accurate guesses based on other features of record 
+    This function replaces each missing age with the mean of all ages with that person's title.
     
     Parameters:
     ----------
     dat: numpy array storing all records of features
     dict: dictionary storing all titles of people
     means: means of age within a given group (initially all zero)
-    ch: specifies whether we want to calculate means (ch==1)
+    ch: specifies whether we want to calculate means (ch == 1)
 
     Returns:
     -------
@@ -343,6 +344,164 @@ def AgeModel(dat, dict, means, ch):
             dat[i,2] = means[ np.int32(dat[i,9]) ]
 
     return dat, means
+
+def AgeModel2(dat, dat2, tar2, ch):
+
+    '''
+    This function uses SVM to predict missing ages. 
+    It uses all the other features as input parameters.
+
+    Parameters:
+    -----------
+    dat: numpy array of all records
+    dat2: numpy array of records that contribute to SVM
+    tar2: numpy array of age labels that train SVM on dat2
+    ch: whether or not to compute dat2 (ch == 1 -> yes)
+    
+    Returns:
+    --------
+    dat: numpy array of all records with new values for missing ages
+    dat2: numpy array of records that contribute to SVM
+    tar2: numpy array of labels that help train SVM
+    '''
+
+    mask = dat[:,2] != -1.0
+
+    # first fill in values of dat2
+    if (ch == 1):
+
+        dat2[:,:2] = dat[mask,:2] # gender, class
+        dat2[:,2:] = dat[mask,3:] # everything else
+        tar2 = dat[mask,2] # age labels
+
+        # mean normalization
+        dat2 = MeanNorm(dat2)
+
+    # now train SVM (initially don't worry about hyper parameters)
+    clf = svm.SVR()
+    clf.fit(dat2, tar2)
+
+    # now make prediction on missing values
+    tmp = np.zeros(((~mask).sum(), 9), dtype = np.float64)
+    tmp[:,:2] = dat[~mask,:2]
+    tmp[:,2:] = dat[~mask,3:]
+    tmp = MeanNorm(tmp)
+    lab = clf.predict(tmp)
+
+    #print clf.score(tmp, lab)
+
+    # now go through dat array and input predictions (mask copying doesn't work)
+    j=0
+    for i in xrange(0, len(dat)):
+        if (dat[i,2] == -1.0):
+            dat[i,2] = lab[j]
+            j += 1
+
+    return dat, dat2, tar2
+
+def AgePlots(dat):
+
+    '''
+    This function generates scatter plots of age vs other features to try and see trends.
+    
+    Parameters:
+    -----------
+    dat: numpy array of all records
+
+    Returns:
+    -------
+    none
+
+    '''
+
+    fig = plt.figure(1, figsize = (10,10))
+    prop = matplotlib.font_manager.FontProperties(size = 10.5)
+    msV = 3.0
+    fs = 10
+
+    # first find all records without missing age                                                     
+    mask = dat[:,2] != -1.0
+
+    # shift data so that all points aren't on top of each other
+    shift = np.random.normal(scale = 0.09, size = mask.sum())
+
+    # plotting age vs class
+    ax = fig.add_subplot(3, 3, 1)
+    ax.plot(dat[mask,1] + shift, dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.get_xaxis().set_ticks([1,2,3])
+    ax.get_xaxis().set_ticklabels(['1st class', '2nd class', '3rd class'],
+                                  rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.axis([0.5, 3.5, min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+
+    # age vs Siblings / Spouses present
+    ax = fig.add_subplot(3, 3, 2)
+    ax.plot(dat[mask,3] + shift, dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.set_xlabel(r"Siblings / Spouses Present", fontsize = fs)
+    ax.axis([min(dat[mask,3]) - 1, max(dat[mask,3]) + 1,
+             min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+
+    # age vs Parents / Children present
+    ax = fig.add_subplot(3, 3, 3)
+    ax.plot(dat[mask,4] + shift, dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.set_xlabel(r"Parents / Children Present", fontsize = fs)
+    ax.axis([min(dat[mask,4]) - 1, max(dat[mask,4]) + 1, 
+             min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+
+    # age vs fare
+    ax = fig.add_subplot(3, 3, 4)
+    ax.plot(dat[mask,5], dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.set_xlabel(r"Fare", fontsize = fs)
+    ax.axis([min(dat[mask,5]) - 20, max(dat[mask,5]) + 20, 
+             min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+
+    # age vs Embarkation
+    ax = fig.add_subplot(3, 3, 5)
+    ax.plot(dat[mask,6] + shift, dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.set_xlabel(r"Embarkation", fontsize = fs)
+    ax.get_xaxis().set_ticks([0,1,2,3])
+    ax.get_xaxis().set_ticklabels(['NA', 'C','Q','S'], rotation = 0, fontsize = fs)
+    ax.axis([-1, 4, min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+
+    # age vs title
+    ax = fig.add_subplot(3, 3, 6)
+    ax.plot(dat[mask,9] + 0.5 * shift, dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.set_xlabel(r"Title (Mr, Miss, ...)", fontsize = fs)
+    ax.axis([min(dat[mask,9]) - 1, max(dat[mask,9]) + 1,
+             min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+
+    # age vs Ticket
+    ax = fig.add_subplot(3, 3, 7)
+    ax.plot(dat[mask,7] + shift, dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.axis([-1, 2, min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+    ax.get_xaxis().set_ticks([0,1])
+    ax.get_xaxis().set_ticklabels(['No Char','Char'], rotation = 0, fontsize = fs)
+    ax.set_xlabel(r"Ticket", fontsize = fs)
+
+    # age vs cabin information
+    ax = fig.add_subplot(3, 3, 8)
+    ax.plot(dat[mask,8] + shift, dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.set_xlabel(r"Cabin Information", fontsize = fs)
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.axis([min(dat[mask,8]) - 1, max(dat[mask,8]) + 1,
+             min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+
+    # age vs gender
+    ax = fig.add_subplot(3, 3, 9)
+    ax.plot(dat[mask,0] + shift, dat[mask,2], 'o', markersize = msV, c = 'b')
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 0, fontsize = fs)
+    ax.axis([0, 3, min(dat[mask,2]) - 1, max(dat[mask,2]) + 1])
+
+    # save figure
+    plt.savefig('agePlots.pdf', bbox_inches = 'tight')
+    fig.clear()
 
 def MeanNorm(dat):
 
