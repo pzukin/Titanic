@@ -25,7 +25,7 @@ def TestRandForest(dat, lab):
 
     # RF parameters. Will choose one based on which does best on the validation set
     # n_estimators, max_features
-    est = range(5, 31, 5)
+    est = range(15, 41, 5)
     feat = range(2, 8, 1)
     par = [(e,f) for e in est for f in feat]
 
@@ -72,7 +72,8 @@ def TestRandForest(dat, lab):
 def plotLearningCurve(dat, lab, optim):
 
      ''' 
-    This function plots the learning curve for the classifier                                                                                                         
+    This function plots the learning curve for the classifier
+
     Parameters:
     ----------- 
     dat: numpy array with all records
@@ -91,10 +92,12 @@ def plotLearningCurve(dat, lab, optim):
                                                                       test_size = 0.3)
 
      # choose various sizes of training set to model on to generate learning curve
-     szV = range(10,np.shape(xTrain)[0], int(np.shape(xTrain)[0]) / 10)
+     szV = range(10, np.shape(xTrain)[0], int(np.shape(xTrain)[0]) / 10)
      szV.append(np.shape(xTrain)[0])
 
-     LCvals=np.zeros((len(szV),3), dtype = np.float64) # store data points of learning curve
+     # stores learning curve data
+     LCvals = np.zeros((len(szV), 3), dtype = np.float64) 
+
      for i in xrange(0, len(szV)):
          clf = clf.fit(xTrain[:szV[i],:], yTrain[:szV[i]])
          LCvals[i,0] = szV[i]
@@ -118,41 +121,47 @@ def plotLearningCurve(dat, lab, optim):
      plt.savefig('LC_RF.pdf', bbox_inches = 'tight')
      fig.clear()
 
-    # where is model failing?
-     clf = clf.fit(xTrain, yTrain)
-     mask = clf.predict(xTest) != yTest
-    #print 'Age'
-    #print xTest[mask,2]
-    #print 'Gender'
-    #print xTest[mask,0]
-    #print 'Class'
-    #print xTest[mask,1]
-    #print '3'
-    #print xTest[mask,3]
-    #print '4'
-    #print xTest[mask,4]
-    #print '5'
-    #print xTest[mask,5]
-    #print '6'
-    #print xTest[mask,6]
-    #print '7'
-    #print xTest[mask,7]
-    #print '8'
-    #print xTest[mask,8]
-    #print mask.sum(), np.shape(xTest)
 
-     print clf.feature_importances_
+def whereFailing(dat, lab, optim):
+
+    '''
+    This algorithm looks and plots where algorithm is failing on training set.
+
+    Parameters:
+    -----------
+    dat: numpy array with all record
+    lab: numpy array with class labels for all records
+    optim: optimal parameters for RF
+
+    Returns:
+    --------
+    none
+
+    '''
+
+    clf = RandomForestClassifier(n_estimators=optim[0],
+                                  max_features = optim[1],
+                                  min_samples_split = 1,
+                                  compute_importances = True)
+
+    # split training data into train and test (already chose optimal parameters)     
+
+    xTrain, xTest, yTrain, yTest = cross_validation.train_test_split(dat, 
+                                                                     lab,
+                                                                     test_size = 0.3)
     
-     predProb = clf.predict_proba(xTest)
-     tmp = np.zeros((np.shape(predProb)[0], np.shape(predProb)[1] + 2))
-     tmp[:,:-2] = predProb
-     tmp[:,-2] = clf.predict(xTest)
-     tmp[:,-1] = yTest
-     mask = tmp[:,-2] != tmp[:,-1]
-     #print tmp[mask]
-     #print mask.sum(), len(xTest)
+    clf = clf.fit(xTrain, yTrain)
+    print '      Score on training set:', clf.score(xTrain, yTrain)
+    print '      Score on test set:', clf.score(xTest, yTest)
+    pred = clf.predict(xTest)
+    predProb = clf.predict_proba(xTest)
+
+    # plot scatter plot of where model is failing
+    utils.plotFail(xTest, yTest, pred, 0)
+
+    # plot probabilities of each point
+    utils.plotProb(predProb, yTest, pred, 0)
     
-     #print tmp[:50,:]
 
 
 def main():
@@ -208,8 +217,13 @@ def main():
     optim = TestRandForest(dat, lab)
 
     # Plotting Learning Curve
+    print 
     print "Plotting the learning curve\n"
     plotLearningCurve(dat, lab, optim)
+
+    # Where is algorithm failing?
+    print "Where is algorithm failing:\n"
+    whereFailing(dat, lab, optim)
 
     # Read in test set
     print "Reading in Test Set\n"
@@ -221,6 +235,9 @@ def main():
     # Make better prediction for missing Age Features
     #testF, means = utils.AgeModel(testF, dictN, means, 0)
     testF, dat2, tar2 = utils.AgeModel2(testF, dat2, tar2, 0)
+
+    # Generate scatter plot for test set
+    utils.plotData(testF, 0) 
 
     #testF = utils.MeanNorm(testF)
 

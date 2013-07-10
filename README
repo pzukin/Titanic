@@ -8,4 +8,6 @@ titanicSVM.py uses Support Vector Machines
 
 titanicGB.py uses Gradient Tree Boosting
 
+titanicEn.py uses an ensemble of all 3 methods above to make predictions
+
 utils.py contains functions used by all programs above

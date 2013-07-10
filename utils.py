@@ -55,7 +55,7 @@ def OutputFile(pred, header, idB, pathV):
 
     '''
 
-    paths = ['predRF.csv', 'predSVM.csv', 'predGB.csv']
+    paths = ['predRF.csv', 'predSVM.csv', 'predGB.csv', 'predEN.csv']
 
     open_file_object = csv.writer(open(paths[pathV], "wb"))
     open_file_object.writerow(header)
@@ -176,7 +176,7 @@ def PrelimPlots(dat, lab):
     fs = 10
 
     # mask for labels
-    mask0 = lab == 0 # all deceased data points                                                        
+    mask0 = lab == 0 # all deceased data points                                   
 
     # shift data so that all points aren't on top of each other
     shift = np.random.normal(scale = 0.09, size = len(lab))
@@ -362,7 +362,7 @@ def AgeModel2(dat, dat2, tar2, ch):
     --------
     dat: numpy array of all records with new values for missing ages
     dat2: numpy array of records that contribute to SVM
-    tar2: numpy array of labels that train SVM
+    tar2: numpy array of labels that help train SVM
     '''
 
     mask = dat[:,2] != -1.0
@@ -523,3 +523,350 @@ def MeanNorm(dat):
     dat = (dat - mn) / std
 
     return dat
+
+def plotFail(dat, yTest, pred, pathn):
+
+    '''
+    This function plots where the model succeeds and fails.
+
+    Parameters:
+    -----------
+    dat: numpy array of records
+    yTest: numpy array of class labels for records
+    pred: model prediction for class labels
+    pathn: output file name
+
+    Return:
+    -------
+    None
+
+    '''
+
+    path = ['failRF.pdf']
+
+    fig = plt.figure(1, figsize = (10,10))
+    prop = matplotlib.font_manager.FontProperties(size = 10.5)
+    msV = 3.0
+    fs = 10
+
+    # mask for all incorrect predictions                          
+    mask0 = yTest != pred
+
+    # shift data so that all points aren't on top of each other
+    shift = np.random.normal(scale = 0.09, size = len(pred))
+    shift2 = np.random.normal(scale = 0.09, size = len(pred))
+
+    # plotting gender vs pclass                            
+    ax = fig.add_subplot(3, 3, 1)
+    ax.plot(dat[mask0,0] + shift2[mask0], dat[mask0,1] + shift[mask0],
+            'o', label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,0] + shift2[~mask0], dat[~mask0,1] + shift[~mask0],
+            'o', label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting                              
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.get_yaxis().set_ticks([1,2,3])
+    ax.get_yaxis().set_ticklabels(['1st class', '2nd class', '3rd class'],
+                                  rotation = 30, fontsize = fs)
+    ax.axis([0.5, 2.5, 0.5, 3.5])
+
+    # plotting gender vs age
+    ax = fig.add_subplot(3, 3, 2)
+    ax.plot(dat[mask0,0] + shift2[mask0], dat[mask0,2],
+            'o', label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,0] + shift2[~mask0], dat[~mask0,2],
+            'o', label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.axis([0.5, 2.5, -5, max(dat[:,2]) + 4])
+    plt.legend(loc='upper right', prop = prop)
+    
+    # plotting gender vs siblings present     
+    ax = fig.add_subplot(3, 3, 3)
+    ax.plot(dat[mask0,0] + shift2[mask0], dat[mask0,3] + shift[mask0],
+            'o', label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,0] + shift2[~mask0], dat[~mask0,3] + shift[~mask0],
+            'o', label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Siblings / Spouses Present", fontsize = fs)
+    ax.axis([0.5, 2.5, -2, max(dat[:,3]) + 2])
+
+    # plotting gender vs parents present
+    ax = fig.add_subplot(3, 3, 4)
+    ax.plot(dat[mask0,0] + shift2[mask0], dat[mask0,4] + shift[mask0],
+            'o',label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,0] + shift2[~mask0], dat[~mask0,4] + shift[~mask0],
+            'o',label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Parents / Children Present", fontsize = fs)
+    ax.axis([0.5, 2.5, -2, max(dat[:,4]) + 2])
+
+    # plotting gender vs fare present                         
+    ax = fig.add_subplot(3, 3, 5)
+    ax.plot(dat[mask0,0] + shift2[mask0], dat[mask0,5],
+            'o', label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,0] + shift2[~mask0], dat[~mask0,5],
+            'o', label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Fare",fontsize = fs)
+    ax.axis([0.5, 2.5, -2, max(dat[:,5]) + 2])
+
+    # plotting gender vs embarked                             
+    ax = fig.add_subplot(3, 3, 6)
+    ax.plot(dat[mask0,0] + shift2[mask0], dat[mask0,6] + shift[mask0],
+            'o',label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,0] + shift2[~mask0], dat[~mask0,6] + shift[~mask0],
+            'o',label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting              
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.get_yaxis().set_ticks([0,1,2,3])
+    ax.get_yaxis().set_ticklabels(['NA', 'C','Q','S'], rotation = 0, fontsize = fs)
+    ax.set_ylabel(r"Embarkation", fontsize = fs)
+    ax.axis([0.5, 2.5, -1, 4])
+
+    # plotting gender vs ticket number
+    ax = fig.add_subplot(3, 3, 7)
+    ax.plot(dat[mask0,0] + shift2[mask0], dat[mask0,7] + shift[mask0],
+            'o', label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,0] + shift2[~mask0], dat[~mask0,7] + shift[~mask0],
+            'o', label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.get_yaxis().set_ticks([0,1])
+    ax.get_yaxis().set_ticklabels(['No Char','Char'], rotation = 0, fontsize = fs)
+    ax.set_ylabel(r"Ticket", fontsize = fs)
+    ax.axis([0.5, 2.5, -1, 2])
+
+    # plotting gender vs whether Cabin is Listed                     
+    ax = fig.add_subplot(3, 3, 8)
+    ax.plot(dat[mask0,0] + shift2[mask0], dat[mask0,8] + shift[mask0],
+            'o', label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,0] + shift2[~mask0], dat[~mask0,8] + shift[~mask0],
+            'o', label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting                                              
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    #ax.get_yaxis().set_ticks([0,1])                                                    
+    #ax.get_yaxis().set_ticklabels(['No Cabin','Cabin'], rotation = 0, fontsize = fs)     
+    ax.set_ylabel(r"Cabin Information", fontsize = fs)
+    #ax.axis([0.5, 2.5, -1, 2])                                                           
+
+    # plotting title vs age                                                               
+    ax = fig.add_subplot(3, 3, 9)
+    ax.plot(dat[mask0,9] + 0.5 * shift2[mask0], dat[mask0,2],
+            'o', label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(dat[~mask0,9] + 0.5 * shift2[~mask0], dat[~mask0,2],
+            'o', label = 'Correct', markersize = msV, c = 'g')
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.set_xlabel(r"Different Titles (Mr, Miss, ...)", fontsize = fs)
+    
+    # save figure
+    plt.savefig(path[pathn], bbox_inches = 'tight')
+    fig.clear()
+
+def plotProb(predProb, yTest, pred, pathn):
+
+    '''
+    This function plots a scatter plot of predicted probabilites.
+    Differentiates between mis-labelled classes.
+
+    Parameters:
+    -----------
+    predProb: a numpy array of predicted probabilities for each class
+    yTest: a numpy array of class labels
+    pred: a numpy array of predicted class labels
+    pathn: output path
+
+    Returns:
+    --------
+    none
+
+    '''
+
+    path = ['probRF.pdf']
+    prob = np.amax(predProb, axis = 1) # getting max along every row
+    mask = yTest != pred
+
+    # so that all points are not right on top of each other
+    shift = np.random.normal(scale = 0.1, size = len(pred))
+
+    fig = plt.figure(1, figsize = (10,10))
+    prop = matplotlib.font_manager.FontProperties(size = 10.5)
+    msV = 4.0
+    fs = 20
+
+    ax = fig.add_subplot(1, 1, 1)
+    ax.plot(prob[mask], pred[mask] + shift[mask],
+            'o', label = 'Incorrect', markersize = msV, c = 'r')
+    ax.plot(prob[~mask], pred[~mask] + shift[~mask],
+            'o', label = 'Correct', markersize = msV, c = 'g')
+
+    # formatting                     
+    ax.set_xlabel(r"Predicted Probability", fontsize = fs)
+    ax.set_ylabel(r"Prediction", fontsize = fs)
+    ax.get_yaxis().set_ticks([0,1])
+    ax.get_yaxis().set_ticklabels(['Deceased', 'Survived'], rotation = 90, fontsize = fs)
+    ax.axis([-0.05, 1.05, -0.5, 1.5])
+    plt.legend(loc='upper left', prop = prop)
+
+    # save figure
+    plt.savefig(path[pathn], bbox_inches = 'tight')
+    fig.clear()
+
+    # curious about how many points are mislabelled below a threshold
+    print '     ', mask.sum(), 'wrong out of', len(pred)
+    thresh = 0.75
+    mask2 = prob[mask] < thresh
+    print '     ', mask2.sum(), 'had probabilities less than', thresh, '\n'
+
+def plotData(dat, pathn):
+
+    '''
+    This function generates a scatter plot of dat. 
+    Useful to see if test set has distributions different than training set.
+
+    Parameters:
+    -----------
+    dat: numpy array of records
+    pathn: path label
+
+    Returns:
+    --------
+    none
+
+    '''
+
+    path = ['testSet.pdf']
+
+    fig = plt.figure(1, figsize = (10,10))
+    msV = 3.0
+    fs = 10
+
+    # shift data so that all points aren't on top of each other
+    shift = np.random.normal(scale = 0.09, size = len(dat[:,0]))
+    shift2 = np.random.normal(scale = 0.09, size = len(dat[:,0]))
+
+    # plotting gender vs pclass                               
+    ax = fig.add_subplot(3, 3, 1)
+    ax.plot(dat[:,0] + shift2, dat[:,1] + shift,
+            'o', markersize = msV, c = 'b')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.get_yaxis().set_ticks([1,2,3])
+    ax.get_yaxis().set_ticklabels(['1st class', '2nd class', '3rd class'],
+                                  rotation = 30, fontsize = fs)
+    ax.axis([0.5, 2.5, 0.5, 3.5])
+
+    # plotting gender vs age                  
+    ax = fig.add_subplot(3, 3, 2)
+    ax.plot(dat[:,0] + shift2, dat[:,2],
+            'o', markersize = msV, c = 'b')
+
+    # formatting 
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.axis([0.5, 2.5, -5, max(dat[:,2]) + 4])
+
+    # plotting gender vs siblings present                                          
+    ax = fig.add_subplot(3, 3, 3)
+    ax.plot(dat[:,0] + shift2, dat[:,3] + shift,
+            'o', markersize = msV, c = 'b')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Siblings / Spouses Present", fontsize = fs)
+    ax.axis([0.5, 2.5, -2, max(dat[:,3]) + 2])
+
+    # plotting gender vs parents present
+    ax = fig.add_subplot(3, 3, 4)
+    ax.plot(dat[:,0] + shift2, dat[:,4] + shift,
+            'o', markersize = msV, c = 'b')
+
+    # formatting 
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Parents / Children Present", fontsize = fs)
+    ax.axis([0.5, 2.5, -2, max(dat[:,4]) + 2])
+
+    # plotting gender vs fare present                                            
+    ax = fig.add_subplot(3, 3, 5)
+    ax.plot(dat[:,0] + shift2, dat[:,5],
+            'o', markersize = msV, c = 'b')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Fare",fontsize = fs)
+    ax.axis([0.5, 2.5, -2, max(dat[:,5]) + 2])
+
+    # plotting gender vs embarked                                                 
+    ax = fig.add_subplot(3, 3, 6)
+    ax.plot(dat[:,0] + shift2, dat[:,6] + shift,
+            'o', markersize = msV, c = 'b')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.get_yaxis().set_ticks([0,1,2,3])
+    ax.get_yaxis().set_ticklabels(['NA', 'C','Q','S'], rotation = 0, fontsize = fs)
+    ax.set_ylabel(r"Embarkation", fontsize = fs)
+    ax.axis([0.5, 2.5, -1, 4])
+
+    # plotting gender vs ticket number
+    ax = fig.add_subplot(3, 3, 7)
+    ax.plot(dat[:,0] + shift2, dat[:,7] + shift,
+            'o', markersize = msV, c = 'b')
+
+    # formatting
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.get_yaxis().set_ticks([0,1])
+    ax.get_yaxis().set_ticklabels(['No Char','Char'], rotation = 0, fontsize = fs)
+    ax.set_ylabel(r"Ticket", fontsize = fs)
+    ax.axis([0.5, 2.5, -1, 2])
+
+    # plotting gender vs whether Cabin is Listed                           
+    ax = fig.add_subplot(3, 3, 8)
+    ax.plot(dat[:,0] + shift2, dat[:,8] + shift,
+            'o', markersize = msV, c = 'b')
+
+    # formatting                                                                        
+    ax.get_xaxis().set_ticks([1,2])
+    ax.get_xaxis().set_ticklabels(['Male', 'Female'], rotation = 30, fontsize = fs)
+    ax.set_ylabel(r"Cabin Information", fontsize = fs)
+
+    # plotting title vs age                                                               
+    ax = fig.add_subplot(3, 3, 9)
+    ax.plot(dat[:,9] + 0.5 * shift2, dat[:,2],
+            'o', markersize = msV, c = 'b')
+    ax.set_ylabel(r"Age", fontsize = fs)
+    ax.set_xlabel(r"Different Titles (Mr, Miss, ...)", fontsize = fs)
+
+    # save figure
+    plt.savefig(path[pathn], bbox_inches = 'tight')
+    fig.clear()
+    
+    
+
